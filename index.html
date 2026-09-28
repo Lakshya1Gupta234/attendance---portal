@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSE Subgroup B2 - Student Attendance Portal</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --accent: #d97706;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --present-color: #10b981;
+            --absent-color: #ef4444;
+            --cancelled-color: #9ca3af;
+            --border-color: #e5e7eb;
+            
+            /* Holiday Event Colors */
+            --holiday-nat-bg: #fee2e2;
+            --holiday-nat-text: #991b1b;
+            --holiday-break-bg: #fef3c7;
+            --holiday-break-text: #92400e;
+            --holiday-exam-bg: #f3e8ff;
+            --holiday-exam-text: #6b21a8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* Auth Styles */
+        .auth-card { max-width: 420px; margin: 80px auto; background: var(--card-bg); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .auth-card h2 { color: var(--primary); margin-bottom: 8px; text-align: center; }
+        .auth-card p { font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; }
+        .auth-btn { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 5px; }
+        .auth-toggle { text-align: center; margin-top: 15px; font-size: 0.85rem; color: var(--primary-light); cursor: pointer; }
+        
+        /* App Styles */
+        #app-portal { display: none; }
+        header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        header p { font-size: 0.9rem; opacity: 0.85; }
+
+        .user-badge { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
+        
+        .owner-banner { background: #312e81; color: #e0e7ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        
+        .progress-bar-bg { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .progress-bar-fill { height: 100%; background: var(--present-color); width: 0%; transition: width 0.3s; }
+
+        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .subject-card { background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); padding: 15px; }
+        .subject-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .subject-title { font-weight: 600; font-size: 0.95rem; }
+        .subject-code { font-size: 0.8rem; color: var(--text-muted); }
+        .subject-stats { display: flex; justify-content: space-between; font-size: 0.85rem; margin-top: 10px; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-safe { background: #d1fae5; color: #065f46; }
+        .badge-warn { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+
+        .tracker-section { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); padding: 20px; }
+        .controls { display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .controls input[type="date"] { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
+        .day-info { font-weight: 600; color: var(--accent); font-size: 0.95rem; }
+
+        /* Holiday Box Styles */
+        .holiday-banner { padding: 16px; border-radius: 8px; font-weight: 700; margin-bottom: 15px; text-align: center; font-size: 1rem; border: 1px solid transparent; }
+        .holiday-national { background: var(--holiday-nat-bg); color: var(--holiday-nat-text); border-color: #fca5a5; }
+        .holiday-break { background: var(--holiday-break-bg); color: var(--holiday-break-text); border-color: #fcd34d; }
+        .holiday-exam { background: var(--holiday-exam-bg); color: var(--holiday-exam-text); border-color: #d8b4fe; }
+
+        .legend-box { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; font-size: 0.8rem; }
+        .legend-item { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
+
+        .class-list { display: flex; flex-direction: column; gap: 12px; }
+        .class-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; background: #fafafa; flex-wrap: wrap; gap: 10px; }
+        .class-info { display: flex; flex-direction: column; }
+        .class-name { font-weight: 600; font-size: 0.95rem; }
+        .class-time { font-size: 0.8rem; color: var(--text-muted); }
+
+        .btn-group { display: flex; gap: 6px; }
+        .btn { border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+        .btn-present { background: #e5e7eb; color: #374151; }
+        .btn-present.active { background: var(--present-color); color: white; }
+        .btn-absent { background: #e5e7eb; color: #374151; }
+        .btn-absent.active { background: var(--absent-color); color: white; }
+        .btn-cancel { background: #e5e7eb; color: #374151; }
+        .btn-cancel.active { background: var(--cancelled-color); color: white; }
+
+        @media (max-width: 600px) {
+            .class-item { flex-direction: column; align-items: flex-start; }
+            .btn-group { width: 100%; justify-content: space-between; }
+            .btn { flex: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- AUTH CONTAINER -->
+<div id="auth-portal" class="auth-card">
+    <h2 id="auth-title">Student Portal Login</h2>
+    <p id="auth-sub">Enter your credentials to access your attendance register</p>
+    
+    <div class="form-group">
+        <label for="roll-no">Roll Number / Username</label>
+        <input type="text" id="roll-no" placeholder="e.g. 2026CSB201 or ADMIN">
+    </div>
+    
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••">
+    </div>
+
+    <button class="auth-btn" id="auth-action-btn" onclick="handleAuth()">Sign In</button>
+    <div class="auth-toggle" id="auth-toggle-btn" onclick="toggleAuthMode()">New User? Register Roll Number</div>
+</div>
+
+<!-- MAIN APP CONTAINER -->
+<div id="app-portal" class="container">
+    <header>
+        <div>
+            <h1>Attendance Tracker</h1>
+            <p>Computer Science & Engineering — Subgroup B2 (2026-27)</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="user-badge" id="user-badge-text">Roll: Guest</div>
+            <button class="btn" style="background: white; color: var(--primary);" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div id="owner-panel" class="owner-banner" style="display: none;">
+        <div>
+            <strong>👑 System Owner Controls</strong>
+            <div style="font-size: 0.85rem; opacity: 0.9;" id="admin-user-count">Registered Students: 0</div>
+        </div>
+        <div>
+            <button class="btn" style="background: #4338ca; color: white;" onclick="exportData()">Backup System DB</button>
+            <button class="btn" style="background: #dc2626; color: white;" onclick="resetCurrentUserData()">Reset My Data</button>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="card">
+            <h3>Overall Attendance</h3>
+            <div class="value" id="overall-pct">100%</div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="overall-bar" style="width: 100%;"></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Classes Attended</h3>
+            <div class="value" id="overall-count">0 / 0</div>
+        </div>
+        <div class="card">
+            <h3>Status Target (≥ 75%)</h3>
+            <div class="value" id="status-text" style="font-size: 1.2rem; margin-top: 5px;">On Track</div>
+        </div>
+    </div>
+
+    <h2 style="margin-bottom: 15px; font-size: 1.2rem; color: var(--primary);">Subject-Wise Overview</h2>
+    <div class="subjects-grid" id="subjects-grid"></div>
+
+    <div class="tracker-section">
+        <h2 style="margin-bottom: 10px; font-size: 1.2rem; color: var(--primary);">Daily Class Register</h2>
+        
+        <!-- Holiday Event Color Legend -->
+        <div class="legend-box">
+            <span class="legend-item holiday-national">🔴 Institute / Public Holiday</span>
+            <span class="legend-item holiday-break">🟡 Mid-Sem Break / Vacation</span>
+            <span class="legend-item holiday-exam">🟣 Mid-Sem / Practical Exams</span>
+        </div>
+
+        <div class="controls">
+            <label for="date-select"><strong>Select Date:</strong> </label>
+            <input type="date" id="date-select" value="2026-08-24" min="2026-08-24" max="2026-12-31" onchange="renderDayClasses()">
+            <div class="day-info" id="day-info"></div>
+        </div>
+
+        <div id="holiday-container"></div>
+        <div class="class-list" id="class-list"></div>
+    </div>
+</div>
+
+<script>
+// --- AUTH & OWNER SYSTEM ---
+let currentUser = null;
+let isSignUpMode = false;
+
+function getUsers() {
+    return JSON.parse(localStorage.getItem('portal_users')) || {
+        "ADMIN": { password: "adminpassword", isAdmin: true, records: {} }
+    };
+}
+
+function saveUsers(users) {
+    localStorage.setItem('portal_users', JSON.stringify(users));
+}
+
+function toggleAuthMode() {
+    isSignUpMode = !isSignUpMode;
+    document.getElementById('auth-title').innerText = isSignUpMode ? "Register Roll Number" : "Student Portal Login";
+    document.getElementById('auth-sub').innerText = isSignUpMode ? "Set your password to create an account" : "Enter your credentials to access your attendance register";
+    document.getElementById('auth-action-btn').innerText = isSignUpMode ? "Create Account" : "Sign In";
+    document.getElementById('auth-toggle-btn').innerText = isSignUpMode ? "Already registered? Sign In" : "New User? Register Roll Number";
+}
+
+function handleAuth() {
+    let roll = document.getElementById('roll-no').value.trim().toUpperCase();
+    let pass = document.getElementById('password').value.trim();
+
+    if(!roll || !pass) {
+        alert("Please provide both Roll Number and Password.");
+        return;
+    }
+
+    let users = getUsers();
+
+    if(isSignUpMode) {
+        if(users[roll]) {
+            alert("Roll number already registered. Please sign in.");
+            return;
+        }
+        users[roll] = { password: pass, isAdmin: roll === 'ADMIN', records: {} };
+        saveUsers(users);
+        alert("Registration successful! Logging in...");
+        loginUser(roll);
+    } else {
+        if(!users[roll] || users[roll].password !== pass) {
+            alert("Invalid Roll Number or Password.");
+            return;
+        }
+        loginUser(roll);
+    }
+}
+
+function loginUser(roll) {
+    currentUser = roll;
+    let users = getUsers();
+    let userData = users[roll];
+
+    document.getElementById('auth-portal').style.display = 'none';
+    document.getElementById('app-portal').style.display = 'block';
+    document.getElementById('user-badge-text').innerText = `Roll: ${roll}` + (userData.isAdmin ? ' 👑 (Owner)' : '');
+
+    if(userData.isAdmin) {
+        document.getElementById('owner-panel').style.display = 'flex';
+        document.getElementById('admin-user-count').innerText = `Registered Students: ${Object.keys(users).length - 1}`;
+    } else {
+        document.getElementById('owner-panel').style.display = 'none';
+    }
+
+    renderDayClasses();
+    updateDashboard();
+}
+
+function logout() {
+    currentUser = null;
+    document.getElementById('app-portal').style.display = 'none';
+    document.getElementById('auth-portal').style.display = 'block';
+    document.getElementById('roll-no').value = '';
+    document.getElementById('password').value = '';
+}
+
+// --- ATTENDANCE TRACKER SYSTEM ---
+const subjects = {
+    'PHM11501_L': { name: 'Physics 1 (Lecture/Tut)', code: 'PHM11501' },
+    'PHM11501_P': { name: 'Physics 1 Lab', code: 'PHM11501' },
+    'MAN11101': { name: 'Mathematics 1', code: 'MAN11101' },
+    'CSN11601_L': { name: 'Intro to AI & ML (Lecture)', code: 'CSN11601' },
+    'CSN11601_P': { name: 'Intro to AI & ML Lab', code: 'CSN11601' },
+    'CSN11101_L': { name: 'Computer Programming (Lecture)', code: 'CSN11101' },
+    'CSN11101_P': { name: 'Computer Programming Lab', code: 'CSN11101' },
+    'CSN11103': { name: 'Discrete Mathematics', code: 'CSN11103' },
+    'CSN11102': { name: 'Intro to Computer Organization', code: 'CSN11102' },
+    'EAN11700': { name: 'Professional Ethics & Social Values', code: 'EAN11700' }
+};
+
+const weeklyTimetable = {
+    'Monday': [
+        { sub: 'CSN11103', time: '11:00 - 12:00 (GS3)', type: 'Lecture' },
+        { sub: 'CSN11101_L', time: '12:00 - 13:00 (GS3)', type: 'Lecture' },
+        { sub: 'MAN11101', time: '14:00 - 15:00 (GS7)', type: 'Lecture' },
+        { sub: 'PHM11501_L', time: '15:00 - 16:00 (GS7)', type: 'Tutorial' },
+        { sub: 'CSN11601_P', time: '16:00 - 18:00 (CCSF Lab)', type: 'Lab (2 hrs)' }
+    ],
+    'Tuesday': [
+        { sub: 'PHM11501_P', time: '09:00 - 11:00 (Physics Lab)', type: 'Lab (2 hrs)' },
+        { sub: 'CSN11102', time: '11:00 - 12:00 (GS4)', type: 'Lecture' },
+        { sub: 'PHM11501_L', time: '12:00 - 13:00 (GS4)', type: 'Lecture' },
+        { sub: 'MAN11101', time: '16:00 - 17:00 (GS3)', type: 'Lecture' }
+    ],
+    'Wednesday': [
+        { sub: 'CSN11601_L', time: '09:00 - 11:00 (NLH1)', type: 'Lecture (2 hrs)' },
+        { sub: 'CSN11101_P', time: '11:00 - 13:00 (L2 Lab CSED)', type: 'Lab (2 hrs)' },
+        { sub: 'MAN11101', time: '14:00 - 15:00 (NLH1)', type: 'Tutorial' },
+        { sub: 'CSN11103', time: '15:00 - 16:00 (NLH1)', type: 'Lecture' }
+    ],
+    'Thursday': [
+        { sub: 'CSN11101_L', time: '11:00 - 12:00 (GS4)', type: 'Lecture' },
+        { sub: 'EAN11700', time: '12:00 - 13:00 (GS4)', type: 'Lecture' },
+        { sub: 'MAN11101', time: '15:00 - 16:00 (GS4)', type: 'Lecture' },
+        { sub: 'PHM11501_L', time: '16:00 - 17:00 (GS4)', type: 'Lecture' }
+    ],
+    'Friday': [
+        { sub: 'CSN11102', time: '14:00 - 16:00 (GS3)', type: 'Lecture (2 hrs)' },
+        { sub: 'EAN11700', time: '16:00 - 17:00 (GS3)', type: 'Lecture' }
+    ]
+};
+
+// Categorized Academic Calendar Events & Holidays
+const holidays = {
+    // National & Institute Holidays (🔴 RED)
+    '2026-09-04': { title: 'Janmashtami', type: 'national' },
+    '2026-09-16': { title: 'Id-e-Milad', type: 'national' },
+    '2026-10-02': { title: 'Gandhi Jayanti', type: 'national' },
+    '2026-10-20': { title: 'Dussehra', type: 'national' },
+    '2026-11-07': { title: 'Diwali Holiday', type: 'national' },
+    '2026-11-08': { title: 'Diwali Holiday', type: 'national' },
+    '2026-11-09': { title: 'Diwali Holiday', type: 'national' },
+    '2026-11-24': { title: 'Guru Nanak Jayanti', type: 'national' },
+    '2026-12-25': { title: 'Christmas Day', type: 'national' },
+
+    // Vacations & Mid-Sem Break (🟡 YELLOW)
+    '2026-10-17': { title: 'Mid-Sem Break Starts', type: 'break' },
+    '2026-10-18': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-19': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-21': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-22': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-23': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-24': { title: 'Mid-Sem Break', type: 'break' },
+    '2026-10-25': { title: 'Mid-Sem Break Ends', type: 'break' },
+
+    // Exams & Evaluation Period (🟣 PURPLE)
+    '2026-10-09': { title: 'MID-SEM Exam Start', type: 'exam' },
+    '2026-10-10': { title: 'MID-SEM Exam', type: 'exam' },
+    '2026-10-12': { title: 'MID-SEM Exam', type: 'exam' },
+    '2026-10-13': { title: 'MID-SEM Exam', type: 'exam' },
+    '2026-10-14': { title: 'MID-SEM Exam', type: 'exam' },
+    '2026-10-15': { title: 'MID-SEM Exam', type: 'exam' },
+    '2026-10-16': { title: 'MID-SEM Exam End', type: 'exam' },
+    '2026-12-15': { title: 'END-SEM Theory Exam Start', type: 'exam' },
+    '2026-12-30': { title: 'END-SEM Theory Exam End', type: 'exam' }
+};
+
+const SaturdayRotationDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+function getUserRecords() {
+    let users = getUsers();
+    return (users[currentUser] && users[currentUser].records) ? users[currentUser].records : {};
+}
+
+function saveUserRecords(records) {
+    let users = getUsers();
+    if(users[currentUser]) {
+        users[currentUser].records = records;
+        saveUsers(users);
+    }
+    updateDashboard();
+}
+
+function getSaturdayDayType(dateStr) {
+    let curr = new Date('2026-08-24');
+    let target = new Date(dateStr);
+    let satCount = 0;
+
+    while (curr <= target) {
+        if (curr.getDay() === 6) {
+            let currStr = curr.toISOString().split('T')[0];
+            if (!holidays[currStr]) satCount++;
+        }
+        curr.setDate(curr.getDate() + 1);
+    }
+    let index = (satCount - 1) % 5;
+    return SaturdayRotationDays[index];
+}
+
+function getClassesForDate(dateStr) {
+    let date = new Date(dateStr);
+    let dayOfWeek = date.getDay();
+    let daysMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let dayName = daysMap[dayOfWeek];
+
+    let isHoliday = holidays[dateStr];
+    let holidayInfo = isHoliday ? isHoliday : (dayOfWeek === 0 ? { title: 'Sunday', type: 'national' } : null);
+
+    if (dayOfWeek === 0) return { classes: [], holiday: holidayInfo };
+
+    let dayClasses = [];
+    let note = null;
+
+    if (dayOfWeek === 6) {
+        let mappedDay = getSaturdayDayType(dateStr);
+        dayClasses = weeklyTimetable[mappedDay] || [];
+        note = `Saturday Schedule (Follows ${mappedDay})`;
+    } else {
+        dayClasses = weeklyTimetable[dayName] || [];
+    }
+
+    return { classes: dayClasses, holiday: holidayInfo, note: note };
+}
+
+function setAttendance(dateStr, classIndex, status) {
+    let records = getUserRecords();
+    let key = `${dateStr}_${classIndex}`;
+    records[key] = status;
+    saveUserRecords(records);
+    renderDayClasses();
+}
+
+function renderDayClasses() {
+    let dateInput = document.getElementById('date-select');
+    let dateStr = dateInput.value;
+    let dayInfoEl = document.getElementById('day-info');
+    let holidayEl = document.getElementById('holiday-container');
+    let listEl = document.getElementById('class-list');
+
+    let schedule = getClassesForDate(dateStr);
+    dayInfoEl.innerText = schedule.note ? schedule.note : '';
+    
+    let isHolidayEvent = !!schedule.holiday;
+
+    if (schedule.holiday) {
+        let holidayObj = schedule.holiday;
+        let cssClass = 'holiday-national';
+        if (holidayObj.type === 'break') cssClass = 'holiday-break';
+        if (holidayObj.type === 'exam') cssClass = 'holiday-exam';
+
+        holidayEl.innerHTML = `<div class="holiday-banner ${cssClass}">Academic Calendar Event: ${holidayObj.title} (Classes Cancelled)</div>`;
+    } else {
+        holidayEl.innerHTML = '';
+    }
+
+    listEl.innerHTML = '';
+    if (schedule.classes.length === 0) {
+        listEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No classes scheduled for this date.</p>';
+        return;
+    }
+
+    let records = getUserRecords();
+
+    schedule.classes.forEach((c, idx) => {
+        let key = `${dateStr}_${idx}`;
+        
+        // Mark all classes on holidays, breaks, and exam days as 'cancelled' automatically
+        if (isHolidayEvent) {
+            records[key] = 'cancelled';
+        } else if (!records[key]) {
+            records[key] = 'present';
+        }
+
+        let status = records[key];
+        let subName = subjects[c.sub] ? subjects[c.sub].name : c.sub;
+
+        let item = document.createElement('div');
+        item.className = 'class-item';
+        item.innerHTML = `
+            <div class="class-info">
+                <span class="class-name">${subName} (${c.type})</span>
+                <span class="class-time">${c.time}</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-present ${status === 'present' ? 'active' : ''}" onclick="setAttendance('${dateStr}', ${idx}, 'present')">Present</button>
+                <button class="btn btn-absent ${status === 'absent' ? 'active' : ''}" onclick="setAttendance('${dateStr}', ${idx}, 'absent')">Absent</button>
+                <button class="btn btn-cancel ${status === 'cancelled' ? 'active' : ''}" onclick="setAttendance('${dateStr}', ${idx}, 'cancelled')">Cancelled</button>
+            </div>
+        `;
+        listEl.appendChild(item);
+    });
+    saveUserRecords(records);
+}
+
+function updateDashboard() {
+    let records = getUserRecords();
+    let subjectStats = {};
+    Object.keys(subjects).forEach(s => {
+        subjectStats[s] = { attended: 0, total: 0 };
+    });
+
+    let overallAttended = 0;
+    let overallTotal = 0;
+
+    Object.keys(records).forEach(key => {
+        let status = records[key];
+        if (status === 'cancelled') return;
+
+        let parts = key.split('_');
+        let dateStr = parts[0];
+        let idx = parseInt(parts[1]);
+
+        let schedule = getClassesForDate(dateStr);
+        if (schedule.classes && schedule.classes[idx]) {
+            let subCode = schedule.classes[idx].sub;
+            if (subjectStats[subCode]) {
+                subjectStats[subCode].total++;
+                if (status === 'present') {
+                    subjectStats[subCode].attended++;
+                }
+            }
+        }
+    });
+
+    Object.keys(subjectStats).forEach(s => {
+        overallAttended += subjectStats[s].attended;
+        overallTotal += subjectStats[s].total;
+    });
+
+    let overallPct = overallTotal > 0 ? Math.round((overallAttended / overallTotal) * 100) : 100;
+    
+    document.getElementById('overall-pct').innerText = `${overallPct}%`;
+    document.getElementById('overall-bar').style.width = `${overallPct}%`;
+    document.getElementById('overall-count').innerText = `${overallAttended} / ${overallTotal}`;
+
+    let statusEl = document.getElementById('status-text');
+    if (overallPct >= 75) {
+        statusEl.innerText = "Safe (≥ 75%)";
+        statusEl.style.color = "var(--present-color)";
+    } else {
+        statusEl.innerText = "Warning (< 75%)";
+        statusEl.style.color = "var(--absent-color)";
+    }
+
+    let grid = document.getElementById('subjects-grid');
+    grid.innerHTML = '';
+    Object.keys(subjects).forEach(subKey => {
+        let st = subjectStats[subKey];
+        let pct = st.total > 0 ? Math.round((st.attended / st.total) * 100) : 100;
+        let badgeClass = pct >= 75 ? 'badge-safe' : (pct >= 65 ? 'badge-warn' : 'badge-danger');
+
+        let marginText = "";
+        if (st.total > 0) {
+            if (pct >= 75) {
+                let maxAbsents = Math.floor((st.attended - 0.75 * st.total) / 0.75);
+                marginText = maxAbsents > 0 ? `Can skip <strong>${maxAbsents}</strong> class(es)` : `On boundary`;
+            } else {
+                let needClasses = Math.ceil((0.75 * st.total - st.attended) / 0.25);
+                marginText = `Need to attend <strong>${needClasses}</strong> class(es)`;
+            }
+        } else {
+            marginText = "No classes recorded yet";
+        }
+
+        let card = document.createElement('div');
+        card.className = 'subject-card';
+        card.innerHTML = `
+            <div class="subject-head">
+                <div>
+                    <div class="subject-title">${subjects[subKey].name}</div>
+                    <div class="subject-code">${subjects[subKey].code}</div>
+                </div>
+                <span class="badge ${badgeClass}">${pct}%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${pct}%; background: ${pct >= 75 ? 'var(--present-color)' : 'var(--absent-color)'}"></div>
+            </div>
+            <div class="subject-stats">
+                <span>Attended: <strong>${st.attended}/${st.total}</strong></span>
+                <span>${marginText}</span>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function resetCurrentUserData() {
+    if (confirm("Reset attendance data for this user account?")) {
+        saveUserRecords({});
+        renderDayClasses();
+    }
+}
+
+function exportData() {
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getUsers()));
+    let downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "system_attendance_backup.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+}
+</script>
+</body>
+</html>
